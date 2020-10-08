@@ -270,12 +270,6 @@ double do_token_list(struct token *token_list, int token_count)
                         }
                     }
                 }
-                if (indent > 0)
-                {
-                    char buffer[100] = {0};
-                    sprintf(buffer, "%d parenthesis never closed.", indent);
-                    error(buffer);
-                }
                 int delta = j - i;
                 struct token sub_token_list[delta - 1];
                 for (int k = 0; k < delta - 1; k++)
@@ -289,7 +283,6 @@ double do_token_list(struct token *token_list, int token_count)
                     token_list[k] = token_list[k + delta];
                 }
                 token_count = token_count - delta;
-                i = 0;
             }
         }
     }
@@ -317,7 +310,6 @@ double do_token_list(struct token *token_list, int token_count)
                     token_list[j - 2] = token_list[j];
                 }
                 token_count -= 2;
-                i = 0;
             }
         }
     }
@@ -349,7 +341,6 @@ double do_token_list(struct token *token_list, int token_count)
                         token_list[j - 1] = token_list[j];
                     }
                     token_count -= 1;
-                    i = 0;
                 }
                 else
                 {
@@ -369,7 +360,6 @@ double do_token_list(struct token *token_list, int token_count)
                         token_list[j - 2] = token_list[j];
                     }
                     token_count -= 2;
-                    i = 0;
                 }
             }
         }
