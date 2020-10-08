@@ -6,6 +6,7 @@
 
 #define TYPE_VALUE 1
 #define TYPE_OPERATOR 2
+#define TYPE_NULL 3
 
 #define SYMBOL_ADD 1
 #define SYMBOL_SUB 2
@@ -139,6 +140,50 @@ int tokenize(char *expression, struct token *tlist)
         previous_char = c;
     }
     return token_index;
+}
+
+int validate_token_list(struct token *token_list, int token_count)
+{
+    int indent = 0;
+    struct token previous_token;
+    struct token next_token;
+    for (int i = 0; i < token_count; i++)
+    {
+        struct token t = token_list[i];
+        if (i == 0)
+        {
+            previous_token.type == TYPE_NULL;
+        }
+        else
+        {
+            previous_token = token_list[i - 1];
+        }
+        if (i == token_count - 1)
+        {
+            previous_token.type == TYPE_NULL;
+        }
+        else
+        {
+            previous_token = token_list[i + 1];
+        }
+        if (t.type == TYPE_OPERATOR)
+        {
+            if (t.symbol == SYMBOL_PAR_OPEN)
+            {
+                indent++;
+            }
+            if (t.symbol == SYMBOL_PAR_CLOSE)
+            {
+                indent--;
+            }
+        }
+    }
+    if (indent != 0)
+    {
+        char buffer[100] = {0};
+        sprintf(buffer, "%d parenthesis never closed.", indent);
+        error(buffer);
+    }
 }
 
 void print_token_list(struct token *token_list, int token_count)
@@ -326,6 +371,7 @@ float do_expression(char *expression)
 {
     struct token token_list[100];
     int token_count = tokenize(expression, token_list);
+    validate_token_list(token_list, token_count);
     return do_token_list(token_list, token_count);
 }
 
