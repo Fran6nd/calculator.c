@@ -13,7 +13,9 @@ else
 fi
 }
 
+echo "--------------------------"
 echo "Running tests..."
+echo "--------------------------"
 test "2*2" "4.000000"
 test "(2*2)+2" "6.000000"
 test "-4*2" "-8.000000"
@@ -22,3 +24,4 @@ test "-(4*4)" "-16.000000"
 test "(2*2)(2*2)" "16.000000"
 test "((4+4)" "Error: 1 parenthesis never closed."
 test "((4+4))))" "Error: -2 parenthesis never closed."
+test "4++4" "Error: two operators without a value between them."

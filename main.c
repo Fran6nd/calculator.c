@@ -53,6 +53,12 @@ int is_symbol(char *c)
         return 1;
     return 0;
 }
+int is_operator(struct token t)
+{
+    if (t.type == TYPE_OPERATOR && (t.symbol == SYMBOL_SUB || t.symbol == SYMBOL_ADD || t.symbol == SYMBOL_MUL || t.symbol == SYMBOL_DIV))
+        return 1;
+    return 0;
+}
 
 int tokenize(char *expression, struct token *tlist)
 {
@@ -168,6 +174,10 @@ int validate_token_list(struct token *token_list, int token_count)
         }
         if (t.type == TYPE_OPERATOR)
         {
+            if ((is_operator(t) && is_operator(previous_token)) || (is_operator(t) && is_operator(next_token)))
+            {
+                error("two operators without a value between them.");
+            }
             if (t.symbol == SYMBOL_PAR_OPEN)
             {
                 indent++;
