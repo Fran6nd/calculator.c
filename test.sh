@@ -7,7 +7,7 @@ $(make calculator)
 test(){
 output=$(./calculator $1)
 if [ "$output" = "$2" ]; then
-    echo "Calculating $1...Ok."
+    echo "Testing $1...Ok."
 else
     echo "Error: calculating $1 gave us $output, $2 expected."
 fi

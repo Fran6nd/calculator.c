@@ -22,7 +22,7 @@ struct token
     int type;
     union
     {
-        float value;
+        double value;
         int symbol;
     };
 };
@@ -235,7 +235,7 @@ void print_token_list(struct token *token_list, int token_count)
     printf("\n");
 }
 
-float do_token_list(struct token *token_list, int token_count)
+double do_token_list(struct token *token_list, int token_count)
 {
     if (DEBUG)
     {
@@ -377,7 +377,7 @@ float do_token_list(struct token *token_list, int token_count)
     return token_list[0].value;
 }
 
-float do_expression(char *expression)
+double do_expression(char *expression)
 {
     struct token token_list[100];
     int token_count = tokenize(expression, token_list);
