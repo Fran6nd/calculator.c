@@ -104,7 +104,7 @@ int tokenize(char *expression, struct token *tlist)
                 tlist[token_index].symbol = OPERATOR_MUL;
                 break;
             case '/':
-                tlist[token_index].symbol = OPERATOR_MUL;
+                tlist[token_index].symbol = OPERATOR_DIV;
                 break;
             case '(':
                 /* We add the symbol * if needed. (2)(2) will become (2)*(2). */
@@ -151,7 +151,7 @@ int tokenize(char *expression, struct token *tlist)
     return token_index;
 }
 
-int validate_token_list(struct token *token_list, int token_count)
+void validate_token_list(struct token *token_list, int token_count)
 {
     int indent = 0;
     struct token previous_token;
@@ -161,7 +161,7 @@ int validate_token_list(struct token *token_list, int token_count)
         struct token t = token_list[i];
         if (i == 0)
         {
-            previous_token.type == TYPE_NULL;
+            previous_token.type = TYPE_NULL;
         }
         else
         {
@@ -169,7 +169,7 @@ int validate_token_list(struct token *token_list, int token_count)
         }
         if (i == token_count - 1)
         {
-            previous_token.type == TYPE_NULL;
+            previous_token.type = TYPE_NULL;
         }
         else
         {
@@ -242,7 +242,10 @@ double do_token_list(struct token *token_list, int token_count)
 {
     if (DEBUG)
     {
+        printf("-----------------------------------\n");
+        printf("Round 0.\n");
         print_token_list(token_list, token_count);
+        printf("-----------------------------------\n");
     }
     /* First round: manage parenthesis! */
     for (int i = 0; i < token_count; i++)
@@ -286,8 +289,16 @@ double do_token_list(struct token *token_list, int token_count)
                     token_list[k] = token_list[k + delta];
                 }
                 token_count = token_count - delta;
+                i = 0;
             }
         }
+    }
+    if (DEBUG)
+    {
+        printf("-----------------------------------\n");
+        printf("Round 1.\n");
+        print_token_list(token_list, token_count);
+        printf("-----------------------------------\n");
     }
     /* 2nd round: manage multiplication and division! */
     for (int i = 0; i < token_count; i++)
@@ -295,7 +306,7 @@ double do_token_list(struct token *token_list, int token_count)
         struct token t = token_list[i];
         if (t.type == TYPE_TOKEN)
         {
-            if (t.symbol == OPERATOR_MUL || t.symbol == OPERATOR_MUL)
+            if (t.symbol == OPERATOR_MUL || t.symbol == OPERATOR_DIV)
             {
                 switch (t.symbol)
                 {
@@ -313,8 +324,16 @@ double do_token_list(struct token *token_list, int token_count)
                     token_list[j - 2] = token_list[j];
                 }
                 token_count -= 2;
+                i = 0;
             }
         }
+    }
+    if (DEBUG)
+    {
+        printf("-----------------------------------\n");
+        printf("Round 2.\n");
+        print_token_list(token_list, token_count);
+        printf("-----------------------------------\n");
     }
     /* 3rd round: manage addition and substraction. */
     for (int i = 0; i < token_count; i++)
@@ -344,6 +363,7 @@ double do_token_list(struct token *token_list, int token_count)
                         token_list[j - 1] = token_list[j];
                     }
                     token_count -= 1;
+                    i = 0;
                 }
                 else
                 {
@@ -363,9 +383,17 @@ double do_token_list(struct token *token_list, int token_count)
                         token_list[j - 2] = token_list[j];
                     }
                     token_count -= 2;
+                    i = 0;
                 }
             }
         }
+    }
+    if (DEBUG)
+    {
+        printf("-----------------------------------\n");
+        printf("Round 3.\n");
+        print_token_list(token_list, token_count);
+        printf("-----------------------------------\n");
     }
     return token_list[0].value;
 }
@@ -388,7 +416,7 @@ int main(int argc, char *argv[])
     else
     {
         DEBUG = 1;
-        printf("%f\n", do_expression("(4*(2*2))"));
+        printf("%f\n", do_expression("4+4/2(5*2)"));
     }
     return 0;
 }
