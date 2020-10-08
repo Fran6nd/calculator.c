@@ -5,15 +5,18 @@
 #include <memory.h>
 
 #define TYPE_VALUE 1
-#define TYPE_OPERATOR 2
+#define TYPE_TOKEN 2
 #define TYPE_NULL 3
 
-#define SYMBOL_ADD 1
-#define SYMBOL_SUB 2
-#define SYMBOL_DIV 3
-#define SYMBOL_MUL 4
-#define SYMBOL_PAR_OPEN 5
-#define SYMBOL_PAR_CLOSE 6
+#define OPERATOR_ADD 0x11
+#define OPERATOR_SUB 0x12
+#define OPERATOR_DIV 0x21
+#define OPERATOR_MUL 0x22
+#define SYMBOL_PAR_OPEN 0x23
+#define SYMBOL_PAR_CLOSE 0x24
+
+#define IS_OPERATOR(op) (op.type == TYPE_TOKEN && ((op.value & 0x10) == 0x10))
+#define IS_SYMBOL(op) (op.type == TYPE_TOKEN && ((op.value & 0x20) == 0x20))
 
 int DEBUG = 0;
 
@@ -55,7 +58,7 @@ int is_symbol(char *c)
 }
 int is_operator(struct token t)
 {
-    if (t.type == TYPE_OPERATOR && (t.symbol == SYMBOL_SUB || t.symbol == SYMBOL_ADD || t.symbol == SYMBOL_MUL || t.symbol == SYMBOL_DIV))
+    if (t.type == TYPE_TOKEN && (t.symbol == OPERATOR_SUB || t.symbol == OPERATOR_ADD || t.symbol == OPERATOR_MUL || t.symbol == OPERATOR_MUL))
         return 1;
     return 0;
 }
@@ -88,28 +91,28 @@ int tokenize(char *expression, struct token *tlist)
                 buffer_index = 0;
                 token_index++;
             }
-            tlist[token_index].type = TYPE_OPERATOR;
+            tlist[token_index].type = TYPE_TOKEN;
             switch (c)
             {
             case '+':
-                tlist[token_index].symbol = SYMBOL_ADD;
+                tlist[token_index].symbol = OPERATOR_ADD;
                 break;
             case '-':
-                tlist[token_index].symbol = SYMBOL_SUB;
+                tlist[token_index].symbol = OPERATOR_SUB;
                 break;
             case '*':
-                tlist[token_index].symbol = SYMBOL_MUL;
+                tlist[token_index].symbol = OPERATOR_MUL;
                 break;
             case '/':
-                tlist[token_index].symbol = SYMBOL_DIV;
+                tlist[token_index].symbol = OPERATOR_MUL;
                 break;
             case '(':
                 /* We add the symbol * if needed. (2)(2) will become (2)*(2). */
                 if (!is_char_operator(previous_char) && previous_char != '(')
                 {
-                    tlist[token_index].symbol = SYMBOL_MUL;
+                    tlist[token_index].symbol = OPERATOR_MUL;
                     token_index++;
-                    tlist[token_index].type = TYPE_OPERATOR;
+                    tlist[token_index].type = TYPE_TOKEN;
                 }
                 tlist[token_index].symbol = SYMBOL_PAR_OPEN;
                 break;
@@ -119,8 +122,8 @@ int tokenize(char *expression, struct token *tlist)
                 if (!is_char_operator(next_char) && next_char != 0 && next_char != '(' && next_char != ')')
                 {
                     token_index++;
-                    tlist[token_index].type = TYPE_OPERATOR;
-                    tlist[token_index].symbol = SYMBOL_MUL;
+                    tlist[token_index].type = TYPE_TOKEN;
+                    tlist[token_index].symbol = OPERATOR_MUL;
                 }
                 break;
             default:
@@ -172,7 +175,7 @@ int validate_token_list(struct token *token_list, int token_count)
         {
             previous_token = token_list[i + 1];
         }
-        if (t.type == TYPE_OPERATOR)
+        if (t.type == TYPE_TOKEN)
         {
             if ((is_operator(t) && is_operator(previous_token)) || (is_operator(t) && is_operator(next_token)))
             {
@@ -215,16 +218,16 @@ void print_token_list(struct token *token_list, int token_count)
             case SYMBOL_PAR_OPEN:
                 printf("(");
                 break;
-            case SYMBOL_ADD:
+            case OPERATOR_ADD:
                 printf("+");
                 break;
-            case SYMBOL_SUB:
+            case OPERATOR_SUB:
                 printf("-");
                 break;
-            case SYMBOL_MUL:
+            case OPERATOR_MUL:
                 printf("*");
                 break;
-            case SYMBOL_DIV:
+            case OPERATOR_DIV:
                 printf("/");
                 break;
             default:
@@ -245,7 +248,7 @@ double do_token_list(struct token *token_list, int token_count)
     for (int i = 0; i < token_count; i++)
     {
         struct token t = token_list[i];
-        if (t.type == TYPE_OPERATOR)
+        if (t.type == TYPE_TOKEN)
         {
             if (t.symbol == SYMBOL_PAR_OPEN)
             {
@@ -254,7 +257,7 @@ double do_token_list(struct token *token_list, int token_count)
                 for (j = i; j < token_count; j++)
                 {
                     struct token t1 = token_list[j];
-                    if (t1.type == TYPE_OPERATOR)
+                    if (t1.type == TYPE_TOKEN)
                     {
                         if (t1.symbol == SYMBOL_PAR_OPEN)
                         {
@@ -290,16 +293,16 @@ double do_token_list(struct token *token_list, int token_count)
     for (int i = 0; i < token_count; i++)
     {
         struct token t = token_list[i];
-        if (t.type == TYPE_OPERATOR)
+        if (t.type == TYPE_TOKEN)
         {
-            if (t.symbol == SYMBOL_MUL || t.symbol == SYMBOL_DIV)
+            if (t.symbol == OPERATOR_MUL || t.symbol == OPERATOR_MUL)
             {
                 switch (t.symbol)
                 {
-                case SYMBOL_MUL:
+                case OPERATOR_MUL:
                     token_list[i - 1].value = token_list[i - 1].value * token_list[i + 1].value;
                     break;
-                case SYMBOL_DIV:
+                case OPERATOR_DIV:
                     token_list[i - 1].value = token_list[i - 1].value / token_list[i + 1].value;
                     break;
                 default:
@@ -317,19 +320,19 @@ double do_token_list(struct token *token_list, int token_count)
     for (int i = 0; i < token_count; i++)
     {
         struct token t = token_list[i];
-        if (t.type == TYPE_OPERATOR)
+        if (t.type == TYPE_TOKEN)
         {
-            if (t.symbol == SYMBOL_ADD || t.symbol == SYMBOL_SUB)
+            if (t.symbol == OPERATOR_ADD || t.symbol == OPERATOR_SUB)
             {
                 /* Manage having expressions such as: -2+4 instead of 4-2 with positive or negative character at the first position. */
                 if (i == 0)
                 {
                     switch (t.symbol)
                     {
-                    case SYMBOL_SUB:
+                    case OPERATOR_SUB:
                         token_list[i].value = 0 - token_list[i + 1].value;
                         break;
-                    case SYMBOL_ADD:
+                    case OPERATOR_ADD:
                         token_list[i].value = token_list[i + 1].value;
                         break;
                     default:
@@ -346,10 +349,10 @@ double do_token_list(struct token *token_list, int token_count)
                 {
                     switch (t.symbol)
                     {
-                    case SYMBOL_SUB:
+                    case OPERATOR_SUB:
                         token_list[i - 1].value = token_list[i - 1].value - token_list[i + 1].value;
                         break;
-                    case SYMBOL_ADD:
+                    case OPERATOR_ADD:
                         token_list[i - 1].value = token_list[i - 1].value + token_list[i + 1].value;
                         break;
                     default:
