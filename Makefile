@@ -1,3 +1,3 @@
 calculator:
 	-rm calculator
-	gcc main.c -o calculator
+	gcc -g -Wextra -Wall main.c -o calculator
