@@ -18,6 +18,17 @@
 #define IS_OPERATOR(op) (op.type == TYPE_TOKEN && ((op.value & 0x10) == 0x10))
 #define IS_SYMBOL(op) (op.type == TYPE_TOKEN && ((op.value & 0x20) == 0x20))
 
+const char *SYMBOLS[] = {
+    "+",
+    "-",
+    "*",
+    "/",
+    "^",
+    "!",
+    "(",
+    ")",
+};
+
 int DEBUG = 0;
 
 struct token
@@ -42,23 +53,36 @@ int is_char_operator(char c)
         return 1;
     return 0;
 }
-int is_char_numeric(char c)
+int is_char_numeric(char *c)
 {
-    if (c >= 60 && c <= 71)
+    if (strlen(c) == 0)
     {
-        return 1;
+        return 0;
     }
-    return 0;
+    for (int i = 0; i < strlen(c); i++)
+    {
+
+        if (c[i] < 48 || c[i] > 57)
+        {
+            return 0;
+        }
+    }
+    return 1;
 }
 int is_symbol(char *c)
 {
-    if (strcmp(c, "-") == 0 || strcmp(c, "+") == 0 || strcmp(c, "*") == 0 || strcmp(c, "/") == 0 || strcmp(c, "(") == 0 || strcmp(c, ")") == 0)
-        return 1;
+    for (int i = 0; i < 8; i++)
+    {
+        if (strcmp(c, SYMBOLS[i]) == 0)
+        {
+            return 1;
+        }
+    }
     return 0;
 }
 int is_operator(struct token t)
 {
-    if (t.type == TYPE_TOKEN && (t.symbol == OPERATOR_SUB || t.symbol == OPERATOR_ADD || t.symbol == OPERATOR_MUL || t.symbol == OPERATOR_MUL))
+    if (t.type == TYPE_TOKEN && (t.symbol == OPERATOR_SUB || t.symbol == OPERATOR_ADD || t.symbol == OPERATOR_MUL || t.symbol == OPERATOR_DIV))
         return 1;
     return 0;
 }
@@ -70,17 +94,105 @@ int tokenize(char *expression, struct token *tlist)
     int token_index = 0;
     char previous_char = '+';
     char next_char = 0;
-    for (int i = 0; i < strlen(expression); i++)
+    char c;
+    for (int i = 0; i <= strlen(expression); i++)
     {
-        char c = expression[i];
-        if (i < strlen(expression) - 1)
+        if (i <= strlen(expression))
         {
-            next_char = expression[i + 1];
+            c = expression[i];
+            if (i < strlen(expression) - 1)
+            {
+                next_char = expression[i + 1];
+            }
+            else
+            {
+                next_char = 0;
+            }
+            buffer[buffer_index] = c;
+            buffer_index++;
         }
-        else
+        if ((!is_symbol(buffer) && !is_char_numeric(buffer)) || i == strlen(expression))
         {
-            next_char = 0;
+            //printf("Not symbol and not num: %s\n", buffer);
+            if(i < strlen(expression))
+            {
+                buffer_index--;
+                buffer[buffer_index] = 0;
+            }
+            if (is_char_numeric(buffer))
+            {
+                //printf("Num: %s\n", buffer);
+                tlist[token_index].type = TYPE_VALUE;
+                tlist[token_index].value = atof(buffer);
+                memset(buffer, 0, 100);
+                buffer_index = 0;
+                token_index++;
+            }
+            else if (is_symbol(buffer))
+            {
+                //printf("Symbol: %s\n", buffer);
+                tlist[token_index].type = TYPE_TOKEN;
+                switch (strlen(buffer))
+                {
+                case 1:
+                    switch (buffer[0])
+                    {
+                    case '+':
+                        tlist[token_index].symbol = OPERATOR_ADD;
+                        break;
+                    case '-':
+                        tlist[token_index].symbol = OPERATOR_SUB;
+                        break;
+                    case '*':
+                        tlist[token_index].symbol = OPERATOR_MUL;
+                        break;
+                    case '/':
+                        tlist[token_index].symbol = OPERATOR_DIV;
+                        break;
+                    case '(':
+                        /* We add the symbol * if needed. (2)(2) will become (2)*(2). */
+                        if (!is_char_operator(previous_char) && previous_char != '(')
+                        {
+                            tlist[token_index].symbol = OPERATOR_MUL;
+                            token_index++;
+                            tlist[token_index].type = TYPE_TOKEN;
+                        }
+                        tlist[token_index].symbol = SYMBOL_PAR_OPEN;
+                        break;
+                    case ')':
+                        tlist[token_index].symbol = SYMBOL_PAR_CLOSE;
+                        /* Here we transform (4x4)5 so it becomes (4x4)*5. */
+                        if (!is_char_operator(next_char) && next_char != 0 && next_char != '(' && next_char != ')')
+                        {
+                            printf("%d-----%c-------%d---\n", (int)next_char, next_char, i);
+                            token_index++;
+                            tlist[token_index].type = TYPE_TOKEN;
+                            tlist[token_index].symbol = OPERATOR_MUL;
+                        }
+                        break;
+                    default:
+                        break;
+                    }
+                    break;
+
+                default:
+                    break;
+                }
+                token_index++;
+            }
+            else
+            {
+                char buffer_tmp[100] = {0};
+                sprintf(buffer_tmp, "Unknown symbol %s.", buffer);
+                error(buffer_tmp);
+            }
+            buffer_index = 0;
+            memset(buffer, 0, 100);
+            buffer[buffer_index] = c;
+            buffer_index++;
         }
+
+        /*
         if (c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')')
         {
             if (strlen(buffer) > 0)
@@ -107,7 +219,7 @@ int tokenize(char *expression, struct token *tlist)
                 tlist[token_index].symbol = OPERATOR_DIV;
                 break;
             case '(':
-                /* We add the symbol * if needed. (2)(2) will become (2)*(2). */
+                /* We add the symbol * if needed. (2)(2) will become (2)*(2). 
                 if (!is_char_operator(previous_char) && previous_char != '(')
                 {
                     tlist[token_index].symbol = OPERATOR_MUL;
@@ -118,7 +230,7 @@ int tokenize(char *expression, struct token *tlist)
                 break;
             case ')':
                 tlist[token_index].symbol = SYMBOL_PAR_CLOSE;
-                /* Here we transform (4x4)5 so it becomes (4x4)*5. */
+                /* Here we transform (4x4)5 so it becomes (4x4)*5. 
                 if (!is_char_operator(next_char) && next_char != 0 && next_char != '(' && next_char != ')')
                 {
                     token_index++;
@@ -146,57 +258,10 @@ int tokenize(char *expression, struct token *tlist)
             buffer[buffer_index] = c;
             buffer_index++;
         }
+        */
         previous_char = c;
     }
     return token_index;
-}
-
-void validate_token_list(struct token *token_list, int token_count)
-{
-    int indent = 0;
-    struct token previous_token;
-    struct token next_token;
-    for (int i = 0; i < token_count; i++)
-    {
-        struct token t = token_list[i];
-        if (i == 0)
-        {
-            previous_token.type = TYPE_NULL;
-        }
-        else
-        {
-            previous_token = token_list[i - 1];
-        }
-        if (i == token_count - 1)
-        {
-            previous_token.type = TYPE_NULL;
-        }
-        else
-        {
-            previous_token = token_list[i + 1];
-        }
-        if (t.type == TYPE_TOKEN)
-        {
-            if ((is_operator(t) && is_operator(previous_token)) || (is_operator(t) && is_operator(next_token)))
-            {
-                error("two operators without a value between them.");
-            }
-            if (t.symbol == SYMBOL_PAR_OPEN)
-            {
-                indent++;
-            }
-            if (t.symbol == SYMBOL_PAR_CLOSE)
-            {
-                indent--;
-            }
-        }
-    }
-    if (indent != 0)
-    {
-        char buffer[100] = {0};
-        sprintf(buffer, "%d parenthesis never closed.", indent);
-        error(buffer);
-    }
 }
 
 void print_token_list(struct token *token_list, int token_count)
@@ -236,6 +301,55 @@ void print_token_list(struct token *token_list, int token_count)
         }
     }
     printf("\n");
+}
+
+void validate_token_list(struct token *token_list, int token_count)
+{
+    int indent = 0;
+    struct token previous_token;
+    struct token next_token;
+    for (int i = 0; i < token_count; i++)
+    {
+        struct token t = token_list[i];
+        if (i == 0)
+        {
+            previous_token.type = TYPE_NULL;
+        }
+        else
+        {
+            previous_token = token_list[i - 1];
+        }
+        if (i == token_count - 1)
+        {
+            previous_token.type = TYPE_NULL;
+        }
+        else
+        {
+            previous_token = token_list[i + 1];
+        }
+        if (t.type == TYPE_TOKEN)
+        {
+            if ((is_operator(t) && is_operator(previous_token)) || (is_operator(t) && is_operator(next_token)))
+            {
+                print_token_list(token_list, token_count);
+                error("two operators without a value between them.");
+            }
+            if (t.symbol == SYMBOL_PAR_OPEN)
+            {
+                indent++;
+            }
+            if (t.symbol == SYMBOL_PAR_CLOSE)
+            {
+                indent--;
+            }
+        }
+    }
+    if (indent != 0)
+    {
+        char buffer[100] = {0};
+        sprintf(buffer, "%d parenthesis never closed.", indent);
+        error(buffer);
+    }
 }
 
 double do_token_list(struct token *token_list, int token_count)
