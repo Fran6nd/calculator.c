@@ -173,6 +173,12 @@ int tokenize(char *expression, struct token *tlist)
     }
     return token_index;
 }
+/* 
+ * This function will convert:
+ *  (2+2)4 -> (2+2)*4
+ *  4(2+2) -> 4*(2+2)
+ * So it becomes more readable by the do_token_list func.
+ */
 int make_mul_op_explicit(struct token *token_list, int token_count)
 {
     for (int i = 0; i < token_count; i++)
@@ -206,7 +212,7 @@ int make_mul_op_explicit(struct token *token_list, int token_count)
                         {
                             token_list[j] = token_list[j - 1];
                         }
-                        token_list[i+1].symbol = OPERATOR_MUL;
+                        token_list[i + 1].symbol = OPERATOR_MUL;
                         i = 0;
                     }
                 }
@@ -255,6 +261,12 @@ void print_token_list(struct token *token_list, int token_count)
     printf("\n");
 }
 
+/*
+ *
+ * This function is here to check that the token list is valid.
+ * It will alllow us to avoid having 4++4 or ((4+4)*3.
+ *
+ */
 void validate_token_list(struct token *token_list, int token_count)
 {
     if (DEBUG)
@@ -309,6 +321,23 @@ void validate_token_list(struct token *token_list, int token_count)
         error(buffer);
     }
 }
+
+/*
+ *
+ * This function isthe core of the calculator.
+ * It will manage operations.
+ * 
+ * Example of action performed:
+ * 
+ * 4+4*2*(2+2) will become:
+ * 1) Manage parenthesis.
+ * 4+4*2*4
+ * 2) Manage multiplication/division.
+ * 4+32
+ * 2) Manage addition/substrcation.
+ * 36
+ *
+ */
 
 double do_token_list(struct token *token_list, int token_count)
 {
