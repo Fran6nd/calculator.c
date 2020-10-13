@@ -80,6 +80,28 @@ int is_symbol(char *c)
     }
     return 0;
 }
+
+int is_beginning_of_symbol(char *c)
+{
+    for (unsigned int i = 0; i < 8; i++)
+    {
+        if (strlen(SYMBOLS[i]) < strlen(c))
+        {
+            int ok = 1;
+            for (unsigned int j = 0; j < strlen(c); j++)
+            {
+                if (c[j] != SYMBOLS[i][j])
+                {
+                    ok = 0;
+                    break;
+                }
+            }
+            if (ok)
+                return 1;
+        }
+    }
+    return 0;
+}
 int is_operator(struct token t)
 {
     if (t.type == TYPE_TOKEN && (t.symbol == OPERATOR_SUB || t.symbol == OPERATOR_ADD || t.symbol == OPERATOR_MUL || t.symbol == OPERATOR_DIV))
@@ -205,7 +227,7 @@ int make_mul_op_explicit(struct token *token_list, int token_count)
             {
                 if (i < token_count - 1)
                 {
-                    if ((token_list[i + 1].type == TYPE_VALUE))
+                    if (token_list[i + 1].type == TYPE_VALUE)
                     {
                         token_count++;
                         for (int j = token_count - 1; j > i; j--)
@@ -292,11 +314,11 @@ void validate_token_list(struct token *token_list, int token_count)
         }
         if (i == token_count - 1)
         {
-            previous_token.type = TYPE_NULL;
+            next_token.type = TYPE_NULL;
         }
         else
         {
-            previous_token = token_list[i + 1];
+            next_token = token_list[i + 1];
         }
         if (t.type == TYPE_TOKEN)
         {
