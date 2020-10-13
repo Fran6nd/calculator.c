@@ -121,6 +121,7 @@ struct token_list *tokenize(char *expression)
             else if (is_symbol(buffer).id != SYMBOL_NULL)
             {
                 tl_add(tl, t_new_symbol(is_symbol(buffer).id));
+                tl->list[tl->size - 1].args = is_symbol(buffer).args;
             }
             else if (!is_beginning_of_symbol(buffer) && strlen(buffer) > 0)
             {
@@ -241,8 +242,42 @@ void validate_token_list(struct token_list *tl)
     for (int i = 0; i < tl->size; i++)
     {
         struct token t = tl->list[i];
+        if (i == 0)
+        {
+            previous_token.type = TYPE_NULL;
+        }
+        else
+        {
+            previous_token = tl->list[i - 1];
+        }
+        if (i == tl->size - 1)
+        {
+            next_token.type = TYPE_NULL;
+        }
+        else
+        {
+            next_token = tl->list[i + 1];
+        }
         if (IS_FUNC(t))
         {
+            if (next_token.type == TYPE_NULL)
+            {
+                error("All functions must have parenthesis after the name.");
+            }
+            struct token_list *args = tl_get_sub_tl(tl, i + 1);
+            int separator_counter = 0;
+            for (int j = 0; j < args->size; j++)
+            {
+                if (args->list[j].type == TYPE_TOKEN && args->list[j].symbol == SYMBOL_ARG_SEPARATOR)
+                {
+                    separator_counter++;
+                }
+            }
+            if (separator_counter + 1 != t.args)
+            {
+                error("Error: invalid number of args.");
+            }
+            tl_free(args);
         }
     }
 }
@@ -307,23 +342,47 @@ double do_token_list(struct token_list *tl)
         if (IS_FUNC(t))
         {
             /* Get args */
+            struct token_list *args = tl_get_sub_tl(tl, i + 1);
+            struct token arg_tab[10];
+            int counter = 0;
+            for (int j = 0; j < args->size; j++)
+            {
+                if (args->list[j].type == TYPE_VALUE)
+                {
+                    arg_tab[counter] = args->list[j];
+                    counter++;
+                }
+                else if (args->list[i].symbol != SYMBOL_NULL && args->list[i].symbol != SYMBOL_ARG_SEPARATOR)
+                {
+                    struct token_list *tl_tmp = tl_get_sub_tl(args, j);
+                    tl_substract(args, j, tl_tmp->size);
+                    tl_add_at(args, t_new_value(do_token_list(tl_tmp)), j);
+                    tl_free(tl_tmp);
+                    j--;
+                }
+            }
+            tl_substract(tl, i, args->size + 1);
             int indent = 0;
             int j;
             /* Make the operation. */
             switch (t.symbol)
             {
             case SYMBOL_SIN:
-                /* code */
+                tl_add_at(tl, t_new_value(sin(arg_tab[0].value)), i);
                 break;
             case SYMBOL_COS:
-                /* code */
+                tl_add_at(tl, t_new_value(cos(arg_tab[0].value)), i);
                 break;
             case SYMBOL_ATAN2:
-                /* code */
+                tl_add_at(tl, t_new_value(atan2(arg_tab[0].value, arg_tab[1].value)), i);
+                break;
+            case SYMBOL_TAN:
+                tl_add_at(tl, t_new_value(tan(arg_tab[0].value)), i);
                 break;
             default:
                 break;
             }
+            tl_free(args);
         }
     }
     if (DEBUG)
@@ -334,7 +393,7 @@ double do_token_list(struct token_list *tl)
         printf("-----------------------------------\n");
     }
     /* 2nd round: manage parenthesis! */
-    
+
     for (int i = 0; i < tl->size; i++)
     {
         struct token t = tl->list[i];
@@ -474,7 +533,7 @@ int main(int argc, char *argv[])
     else
     {
         DEBUG = 1;
-        printf("%f\n", do_expression("(2*2)(2*2)"));
+        printf("%f\n", do_expression("sin((1+1))"));
     }
     tl_check_free_all();
     return 0;

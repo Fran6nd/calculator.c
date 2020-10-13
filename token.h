@@ -18,6 +18,7 @@
 #define SYMBOL_COS 0x31
 #define SYMBOL_SIN 0X32
 #define SYMBOL_ATAN2 0X33
+#define SYMBOL_TAN 0X34
 
 
 #define IS_OPERATOR(op) (op.type == TYPE_TOKEN && ((op.symbol & 0x10) == 0x10))
@@ -45,17 +46,18 @@ static const struct symbol SYMBOLS[] = {
     {",", SYMBOL_ARG_SEPARATOR, 0},
     {"cos", SYMBOL_COS, 1},
     {"sin", SYMBOL_SIN, 1},
+    {"sin", SYMBOL_TAN, 1},
     {"atan2", SYMBOL_ATAN2, 2},
 };
 
 struct token
 {
     int type;
+    int args;
     union
     {
         double value;
         int symbol;
-        int args;
     };
 };
 
