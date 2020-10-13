@@ -105,7 +105,7 @@ struct token_list *tokenize(char *expression)
         c = expression[i];
         buffer[buffer_index] = c;
         buffer_index++;
-        if ((is_symbol(buffer).id == SYMBOL_NULL && !is_string_number(buffer) && !is_beginning_of_symbol(buffer)) || i == strlen(expression))
+        if ((is_symbol(buffer).id == SYMBOL_NULL && !is_string_number(buffer) && !is_beginning_of_symbol(buffer)) || i == strlen(expression) || c == ' ')
         {
             if (i < strlen(expression) && i > 0)
             {
@@ -131,8 +131,11 @@ struct token_list *tokenize(char *expression)
             }
             buffer_index = 0;
             memset(buffer, 0, 100);
-            buffer[0] = c;
-            buffer_index++;
+            if (c != ' ')
+            {
+                buffer[0] = c;
+                buffer_index++;
+            }
         }
     }
     return tl;
@@ -141,6 +144,7 @@ struct token_list *tokenize(char *expression)
  * This function will convert:
  *  (2+2)4 -> (2+2)*4
  *  4(2+2) -> 4*(2+2)
+ *  4func(1,2) -> 4*func(1,2)
  * So it becomes more readable by the do_token_list func.
  */
 void make_mul_op_explicit(struct token_list *tl)
@@ -172,6 +176,17 @@ void make_mul_op_explicit(struct token_list *tl)
                     if (tl->list[i + 1].type == TYPE_VALUE || IS_FUNC(tl->list[i + 1]))
                     {
                         tl_add_at(tl, t_new_symbol(SYMBOL_MUL), i + 1);
+                        i = 0;
+                    }
+                }
+            }
+            else if (IS_FUNC(tl->list[i]))
+            {
+                if (i > 0)
+                {
+                    if (tl->list[i - 1].type == TYPE_VALUE)
+                    {
+                        tl_add_at(tl, t_new_symbol(SYMBOL_MUL), i);
                         i = 0;
                     }
                 }
@@ -343,41 +358,42 @@ double do_token_list(struct token_list *tl)
         {
             /* Get args */
             struct token_list *args = tl_get_sub_tl(tl, i + 1);
-            struct token arg_tab[10];
+            /* Then we will put them into the stack. */
+            struct token stack[10];
             int counter = 0;
+            struct token_list *arg_tmp = tl_new();
             for (int j = 0; j < args->size; j++)
             {
-                if (args->list[j].type == TYPE_VALUE)
+                if (args->list[j].symbol != SYMBOL_ARG_SEPARATOR)
                 {
-                    arg_tab[counter] = args->list[j];
+                    tl_add(arg_tmp, args->list[j]);
+                }
+                if (args->list[j].symbol == SYMBOL_ARG_SEPARATOR || j == args->size - 1)
+                {
+                    stack[counter] = t_new_value(do_token_list(arg_tmp));
+                    tl_free(arg_tmp);
+                    arg_tmp = tl_new();
                     counter++;
                 }
-                else if (args->list[i].symbol != SYMBOL_NULL && args->list[i].symbol != SYMBOL_ARG_SEPARATOR)
-                {
-                    struct token_list *tl_tmp = tl_get_sub_tl(args, j);
-                    tl_substract(args, j, tl_tmp->size);
-                    tl_add_at(args, t_new_value(do_token_list(tl_tmp)), j);
-                    tl_free(tl_tmp);
-                    j--;
-                }
             }
+            tl_free(arg_tmp);
             tl_substract(tl, i, args->size + 1);
             int indent = 0;
             int j;
-            /* Make the operation. */
+            /* Perform function calls. */
             switch (t.symbol)
             {
             case SYMBOL_SIN:
-                tl_add_at(tl, t_new_value(sin(arg_tab[0].value)), i);
+                tl_add_at(tl, t_new_value(sin(stack[0].value)), i);
                 break;
             case SYMBOL_COS:
-                tl_add_at(tl, t_new_value(cos(arg_tab[0].value)), i);
+                tl_add_at(tl, t_new_value(cos(stack[0].value)), i);
                 break;
             case SYMBOL_ATAN2:
-                tl_add_at(tl, t_new_value(atan2(arg_tab[0].value, arg_tab[1].value)), i);
+                tl_add_at(tl, t_new_value(atan2(stack[0].value, stack[1].value)), i);
                 break;
             case SYMBOL_TAN:
-                tl_add_at(tl, t_new_value(tan(arg_tab[0].value)), i);
+                tl_add_at(tl, t_new_value(tan(stack[0].value)), i);
                 break;
             default:
                 break;
@@ -519,21 +535,20 @@ double do_expression(char *expression)
     validate_token_list(tl);
     double res = do_token_list(tl);
     tl_free(tl);
-    tl_check_free_all();
     return res;
 }
 
 int main(int argc, char *argv[])
 {
-    /* Print 62.5. */
     if (argc == 2)
     {
+        DEBUG = 0;
         printf("%f\n", do_expression(argv[1]));
     }
     else
     {
         DEBUG = 1;
-        printf("%f\n", do_expression("sin((1+1))"));
+        printf("%f\n", do_expression("sin(1)"));
     }
     tl_check_free_all();
     return 0;
