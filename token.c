@@ -32,6 +32,3 @@ struct token t_new_symbol(int id)
     t.symbol = id;
     return t;
 }
-struct token t_new_from_str(char *str)
-{
-}

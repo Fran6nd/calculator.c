@@ -64,6 +64,5 @@ struct token
 void t_print(struct token t);
 struct token t_new_value(double v);
 struct token t_new_symbol(int id);
-struct token t_new_from_str(char* str);
 
 #endif

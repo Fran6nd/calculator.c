@@ -378,8 +378,7 @@ double do_token_list(struct token_list *tl)
             }
             tl_free(arg_tmp);
             tl_substract(tl, i, args->size + 1);
-            int indent = 0;
-            int j;
+
             /* Perform function calls. */
             switch (t.symbol)
             {
